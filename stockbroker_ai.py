@@ -1,5 +1,14 @@
 import os
 
+import streamlit as st
+import yfinance as yf
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+import bcrypt
+import time
+import os
 try:
     with open("password_hash.txt", "rb") as f:
         hashed_password = f.read()
