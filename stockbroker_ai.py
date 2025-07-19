@@ -1,24 +1,18 @@
+# Secure Goal-Oriented Trading AI (Phase 2: Broker Selection + API/Sim)
+# -----------------------------------------------------------
+# Requirements:
+# pip install streamlit yfinance pandas numpy scikit-learn bcrypt
 
-import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
-import bcrypt
+import streamlit as st
 import time
-import os
-
-st.set_option('client.showErrorDetails', True)
 
 # ------------------- Secure Login -------------------
-try:
-    with open("password_hash.txt", "rb") as f:
-        hashed_password = f.read()
-except FileNotFoundError:
-    st.error("Missing password_hash.txt! Upload it to your app folder.")
-    st.stop()
-
+hashed_password = b"$2b$12$gWw5A0QK0JrUCcyZGJmlkOKlcuqk5Xn9slVuYzgoG7If5fVu10nIa"
 attempts = st.session_state.get("attempts", 0)
 
 def login():
@@ -31,7 +25,7 @@ def login():
             time.sleep(30)
             attempts = 0
 
-        if bcrypt.checkpw(pw.encode(), hashed_password):
+        if pw == "Shaurya@2313":
             st.session_state["authenticated"] = True
         else:
             st.session_state["attempts"] = attempts + 1
@@ -45,6 +39,7 @@ if not st.session_state.get("authenticated"):
 st.title("🤖 Stockbroker AI - Mission Control")
 
 broker = st.selectbox("Select your broker:", ["Zerodha", "Upstox", "Angel One", "Investopedia Simulator", "Other/Manual"])
+
 token = None
 simulator_mode = False
 
@@ -60,6 +55,7 @@ else:
     simulator_mode = True
     st.warning("⚠️ API not available for this broker. Switching to simulation mode.")
 
+# Input Section
 start_capital = st.number_input("Enter Starting Capital (₹):", value=1000)
 target = st.number_input("Enter Target Amount (₹):", value=1000000)
 
@@ -111,13 +107,28 @@ if st.button("🚀 Launch AI Mission"):
 
     steps = 30
     equity = [start_capital]
+    target_hit = False
+
     for i in range(steps):
         equity.append(equity[-1] * np.random.uniform(1.01, 1.05))
         if equity[-1] >= target:
-            break
+            target_hit = True
+        # AI continues regardless
 
     st.line_chart(pd.Series(equity, name="Capital Over Time"))
-    if equity[-1] >= target:
-        st.success(f"🎯 Target of ₹{target} reached in {len(equity)-1} steps!")
+
+    market_close_hour = 15  # 3 PM IST
+    current_hour = time.localtime().tm_hour
+
+    if target_hit:
+        if equity[-1] < start_capital:
+            st.warning("🎯 Target hit, but capital dropped. AI stays active to recover.")
+        elif current_hour < market_close_hour:
+            st.info("✅ Target reached early. AI still active until market close to protect gains.")
+        else:
+            st.success("✅ Target reached. Market closed. Mission complete.")
     else:
-        st.warning("Target not reached. AI continues learning.")
+        if current_hour < market_close_hour:
+            st.info("AI is trading to reach your goal before market closes.")
+        else:
+            st.warning("⚠️ Market closed. Final target not reached. Restart tomorrow.")
